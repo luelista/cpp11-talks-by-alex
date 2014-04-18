@@ -1,0 +1,19 @@
+digraph pointer
+{
+	node [shape=plaintext];
+	somememorylabel [pos="240,48",fontname="Sans-Serif",fontsize="14"label="somewhere\nin some memory"]
+	somememory [pos="240,0",fontname="Monospace",fontsize="13",label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+			<TR><TD>0x0000 - 0x1233</TD><TD>...</TD></TR>
+			<TR><TD PORT="ptrto">0x1234 - 0x123B</TD><TD>(int) 4800;</TD></TR>
+			<TR><TD>0x123C - 0x8192</TD><TD>...</TD></TR>
+		</TABLE>>]
+	stackmemorylabel [pos="0,48",fontname="Sans-Serif",fontsize="14",label="somewhere\non the stack"]
+	stackmemory [pos="0,0",fontname="Monospace",fontsize="13",label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+			<TR><TD>...</TD></TR>
+			<TR><TD PORT="ptrfrom">int *c = 0x1234;</TD></TR>
+			<TR><TD>...</TD></TR>
+		</TABLE>>]
+	stackmemory:ptrfrom -> somememory:ptrto;
+}

@@ -1,0 +1,1060 @@
+\input{common_pres}
+\input{c++_stuff}
+
+\author{Alexander Hirsch}
+\begin{document}
+	\title{Cool, new features of \C++11}
+	\subtitle{\insertauthor}
+	
+	\begin{frame}
+		\begin{center}
+			{\Huge  Cool, new features of \C++11 \\}
+			{\LARGE (Pt. 1: Language Version)}
+			
+			\emptyline
+			{\Large An incomplete(!) introduction to changes introduced in \C++11}
+		\end{center}
+		
+		\only<beamer:0>{
+			\emptyline[5.5]
+			\begin{center}
+				\raisebox{-.35\height}{
+					\href{https://creativecommons.org/publicdomain/zero/1.0/}{\includegraphics[scale=0.5]{cc-zero.pdf}}
+				}%
+				\hint{$\leftarrow$ link}
+				
+				\emptyline[0.5]
+				To the extent possible under law, Alexander Hirsch has waived all copyright and related or neighboring rights to this handout.
+			\end{center}
+		}
+	\end{frame}
+	
+	\begin{frame}{Who am I?}
+		\begin{itemize}
+			\item Alexander Hirsch
+				
+			\leftskip=2em
+				\item E-Mail: 1zeeky@gmail.com
+				\item Jabber/XMPP: z33ky@jabber.ccc.de
+				
+			\leftskip=0pt
+			
+			\emptyline
+			\item Computer Science student at TU Darmstadt
+			\item hobby-programmer
+			\emptyline
+			\item looked into many languages and programming paradigms
+			\item most experience with \C++ (started getting proficient around 2007)
+		\end{itemize}
+	\end{frame}
+		
+	\begin{frame}{Disclaimer}
+		What I state as facts might actually be untrue (though they are to my knowledge).
+		
+		\emptyline
+		
+		What I present as something ``you should do'', might not actually me a common idiom
+		and just my personal opinion.
+		
+		\pause
+		
+		\emptyline
+		Examples are not necessarily in good coding style. They are just intended to show specific features and hint at use cases.
+		
+		\only<beamer:0>{
+			\emptyline
+			They should be valid \C++, apart from missing \lstinline|\#include|s and some code should be inside a function, albeit it not being shown this way.
+			
+			Except of course where noted that the example would produce an error.
+		}
+	\end{frame}
+	
+	\begin{frame}{A shout out}
+		A shout out to these websites I find very helpful for getting information about \C++:
+		\begin{itemize}
+			\item \url{https://en.wikipedia.org/wiki/C\%2B\%2B11}
+			\item \url{http://cppreference.com}
+			\item \url{https://cppandbeyond.com}
+			\item \url{https://stackoverflow.com}
+			\item \url{https://isocpp.org}
+			\item \url{http://meetingcpp.com}
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		The Standard document is obviously also a very good source. \\
+		The (free) draft is mostly fine, too.
+	\end{frame}
+	
+	\begin{frame}{Cool, new features of \C++11}
+		\begin{small}
+			\tableofcontents
+		\end{small}
+	\end{frame}
+	
+	\section{(rvalue-references)}
+	\section{(initializer lists)}
+	
+	\section{\ttfamily auto}
+	\begin{frame}
+		\begin{center}
+			\lstinline[basicstyle=\Huge\ttfamily]|auto|
+			
+			\emptyline
+			{\Large type deduction for declarations}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{\lstinline|auto|}
+		When defining variables you can let \C++ \textbf{deduce the type} from the \textbf{initializing expression}.
+		
+		\only<beamer:0>{
+			\emptyline
+			\lstinline|auto| resolves only to \textbf{non-cv\footnote{\lstinline|const| and \lstinline|volatile|}-qualified value- and pointer-types}.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\lstinline|auto| examples}
+		\begin{lstlisting}[gobble=12]
+			auto a = 5;
+			const auto b = 23;
+			const auto &c = b;
+			
+			auto &d = b;        //error: mutable reference from const
+			auto e = 0, f = 0u; //error: different types inferred
+			auto g;             //error: nothing to deduce type from
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\lstinline|auto| examples}
+		\begin{lstlisting}[gobble=12]
+			template<typename T>
+			struct Foo
+			{
+			    typedef std::map<int, T> TypeAssocMap;
+			    
+			    static const TypeAssocMap& GetAssociations();
+			};
+		\end{lstlisting}
+			
+		\begin{lstlisting}[gobble=12]
+			const auto &assocs = Foo<std::size_t>::GetAssociations();
+			//assocs is of type const std::map<int, std::size_t>&
+			//a.k.a. const Foo<std::size_t>::TypeAssocMap&
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile]{\lstinline|auto| examples}
+		\begin{lstlisting}
+			auto iter = assocs.rbegin();
+			//iter is of type std::reverse_iterator<implementation-defined>
+			//  implementation-defined a.k.a.
+			//  std::map<int, std::size_t>::const_iterator
+			//a.k.a. std::map<int, std::size_t>::const_reverse_iterator
+			//a.k.a. Foo<std::size_t>::TypeAssocMap::const_reverse_iterator
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}
+			const auto &elem = *iter;
+			//elem is of type const std::pair<int, std::size_t>&
+			//a.k.a. const std::map<int, std::size_t>::value_type&
+			//a.k.a. const Foo<std::size_t>::TypeAssocMap::value_type&
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{\ttfamily decltype}
+	\begin{frame}
+		\begin{center}
+			\lstinline[basicstyle=\Huge\ttfamily]|decltype|
+			
+			\emptyline
+			{\Large type of expressions and declared variables}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{\lstinline|decltype|}
+		With \lstinline|decltype| you can \textbf{deduce the type} of an expression or the \textbf{declared type} of a variable.
+		
+		\only<beamer:0>{
+			\emptyline
+			This includes cv-qualified value-, pointer- and reference-types.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile]{\lstinline|decltype| examples}
+		\begin{lstlisting}
+			volatile int a = 5, &b = a;
+			decltype(b) c = b; //c is of type volatile int&
+			auto        d = b; //d is of type          int
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}
+			//weird to express before
+			template<typename T, typename U>
+			decltype(T() - U()) foo(T a, U b) { return a - b; }
+		\end{lstlisting}
+		
+	\end{frame}
+		
+	\begin{frame}[fragile]{\lstinline|decltype| examples}
+		\begin{lstlisting}
+			decltype(Foo<std::size_t>::GetAssociations()) assocs =
+			    Foo<std::size_t>::GetAssociations();
+			//assocs will be a const reference
+			//more to type, but also more agnostic to changes
+			//with our implementation
+		\end{lstlisting}
+		
+		\pause
+		
+		\only<beamer:0>{
+			Not too useful in a familiar environment, but when you want to write
+			\textbf{generic, type agnostic algorithms} or such, \lstinline|decltype| can help immensely.
+			
+			Also
+		}%
+		\only<handout:0>{Useful}
+		when just \textbf{declaring variables}, as \lstinline|auto| won't work there
+		(nothing to infer the type from).
+	\end{frame}
+	
+	\section{\ttfamily constexpr}
+	\begin{frame}
+		\begin{center}
+			\lstinline[basicstyle=\Huge\ttfamily]|constexpr|
+			
+			\emptyline
+			{\Large compile-time evaluation of functions}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{\lstinline|constexpr|}
+		Compile-time constants then:
+		\begin{itemize}
+			\item integral constants via \lstinline|enum| or \lstinline|const| (except \lstinline|extern|'d)
+			\item literals \hint{\lstinline|\#define|}
+			\item (most) expressions containing these
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		Now also single-statement functions (cannot return \lstinline|void|)
+		
+		and \textbf{constructors} (must have (more or less) empty body).
+		
+		\emptyline
+		Variables can also be declared \lstinline|constexpr| \rarrow ensures ``compile-timeness''.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\lstinline|constexpr| examples}
+		\begin{lstlisting}[gobble=12]
+			struct Foo
+			{
+			    constexpr Foo(std::size_t i):I(i) {}
+			    
+			    constexpr Foo operator+(std::size_t i) const
+			        { return Foo(GetI() + i); }
+			    
+			    constexpr std::size_t GetI() const { return I; }
+			    
+			private:
+			    std::size_t I;
+			};
+			
+			constexpr std::size_t one = 1;
+			char buf[(Foo(255) + one).GetI()];
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{defaulting and deleting functions}
+	\begin{frame}
+		\begin{center}
+			{\Huge defaulting and deleting functions}
+			
+			\emptyline
+			{\Large implement trivial functions and remove functions}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{defaulting and deleting functions - \lstinline|default|}
+		\only<beamer:0>{
+			\C++ can implicitly define the default-, copy- and move-constructors, destructors, \\
+			and copy- and move-assignment operators.
+			
+			\emptyline
+		}
+		
+		The compiler may not
+		\only<beamer:0>{%
+			do that (like writing a constructor prevents implicit definition of default-, copy- and move-constructors)%
+		}%
+		\only<handout:0>{%
+			implicitly create a function%
+		}%
+		, \\
+		but you can \textbf{explicitly default} them, in which case they will be defined as if they had been implicitly created.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{defaulting and deleting functions - \lstinline|default| examples}
+		\begin{lstlisting}[gobble=12]
+			struct Foo
+			{
+			    Foo();
+			    Foo(const Foo&) = default;
+			    virtual ~Foo();
+			};
+			
+			Foo() { /*...*/  }
+			Foo::~Foo() = default;
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{defaulting and deleting functions - \lstinline|default| examples}
+		\begin{lstlisting}[gobble=12]
+			struct Singleton
+			{
+			    static Singleton& Instance()
+			        { static Singleton s; return s; }
+			    
+			private:
+			    Singleton() = default;
+			};
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{defaulting and deleting functions - \lstinline|delete|}
+		You can also \lstinline|delete| functions with the same syntax.
+		
+		\emptyline
+		\lstinline|delete| can:
+		\begin{itemize}
+			\item prevent implicit functions
+			\item suppress inherited functions
+			\item \lstinline|delete| overloads (to prevent implicit conversion)
+		\end{itemize}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{defaulting and deleting functions - \lstinline|delete| examples}
+		\begin{lstlisting}[gobble=12]
+			struct Foo
+			{
+			    Foo(const Foo&) = delete;
+			    int Bar();
+			    int Bar(long);
+			    int Bar(int) = delete;
+			};
+			struct Baz : Foo
+			{
+			    int Bar(long) = delete;
+			};
+			
+			Foo f;
+			Foo o(f);  //error: Foo(const Foo&) deleted
+			f.Bar(1);  //error: Bar(int) deleted
+			f.Bar(1l); //ok
+			
+			Baz b;
+			b.Bar(1l); //error: Bar(long) deleted
+			b.Bar();   //ok
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{delegating constructors}
+	\begin{frame}
+		\begin{center}
+			{\Huge delegating constructors}
+			
+			\emptyline
+			{\Large invoking a constructor from another constructor}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{delegating constructors}
+		Sometimes you do very \textbf{similar initialization} from constructors with different parameters.
+		
+		\emptyline
+		In \C++11 you can write one constructor to do most or all of that work and let \textbf{other constructors delegate} to it.
+		
+		\pause
+		
+		\emptyline
+		The syntax is like calling a parent constructor.
+		
+		\only<beamer:0>{
+			\emptyline
+			You cannot do any further initialization.
+			
+			You can put code in the constructor body though, just nothing else in the initialization list.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{delegating constructors examples}
+		\begin{lstlisting}[gobble=12]
+			struct Foo
+			{
+			    Foo():Foo(1, 1, 1) {}
+			    
+			    Foo(int a, int b, int c):A(a), B(b), C(c), Sum(A + B + C) {}
+			    
+			    template<typename Container>
+			    Foo(const Container &c):Foo(c[0], c[1], c[2]) {}
+			    
+			    int A, B, C;
+			    int Sum;
+			};
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{\ttfamily static\_assert}
+	\begin{frame}
+		\begin{center}
+			\lstinline[basicstyle=\Huge\ttfamily]|static_assert|
+			
+			\emptyline
+			{\Large compile-time assertions}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}<beamer:0>[fragile=singleslide]{\lstinline|static_assert| - runtime assert}
+		We already have the \lstinline|assert|-macro in assert.h for run-time assertions.
+		
+		\emptyline
+		One possible approach for a compile-time assertion was to conditionally allocate an array of size 0 or -1.
+		
+		\begin{lstlisting}[gobble=12,xleftmargin=2em]
+			#define STATIC_ASSERT(cond) \
+			    { typedef int _assert[(cond) ? 0 : -1]; }
+		\end{lstlisting}
+		
+		This does not make for a precise error message.
+		
+		\emptyline
+		\hint{There are better, but less smaller ways to do this in C++98.}
+	\end{frame}
+		
+	\begin{frame}{\lstinline|static_assert|}
+		\C++11 defines \lstinline|static_assert|, which takes a
+		\only<beamer:0>{constant expression evaluating to}
+		\lstinline|bool|%
+		\only<beamer:0>{-expression}
+		and a string literal as arguments.
+		
+		\pause
+		
+		\emptyline
+		When the expression is true, nothing happens.
+		
+		When it is false, the compiler will error and display the string.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\lstinline|static_assert| examples}
+		\begin{lstlisting}[gobble=12]
+			template<typename Float, typename Integer = int>
+			Integer round2int(const Float f)
+			{
+			    static_assert(std::is_floating_point(f),
+			        "Trying to round non-floating point type");
+			    return static_cast<Integer>(f - static_cast<Float>(0.5));
+			}
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\lstinline|static_assert| examples}
+		\begin{lstlisting}[gobble=12]
+			struct RGB
+			{
+			    RGB(const RGB&) = default;
+			    RGB(const uint8_t val[]):RGB(*reinterpret_cast<RGB*>(val)) {}
+			    
+			    operator uint8_t*()
+			    {
+			        return reinterpret_cast<uint8_t*>(this);
+			    }
+			    
+			    uint8_t R, G, B;
+			};
+			static_assert(
+			    std::is_standard_layout<RGB>::value,
+			    "struct RGB must be of standard layout.");
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{enum classes}
+	\begin{frame}
+		\begin{center}
+			{\Huge enum classes}
+			
+			\emptyline
+			{\Large scoped and stronger typed enums}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{enum classes - traditional enums}
+		In \C++, enumeration-types are one-way implicitly convertible:
+		
+		Enum-member to integers.
+		
+		\only<beamer:0>{
+			You can still \lstinline|static_cast| integers to enum-types.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{enum classes examples - traditional enums}
+		\begin{lstlisting}[gobble=12]
+			enum Day
+			{
+			    Monday, Tuesday, Wednesday,
+			    Thursday, Friday, Saturday, Sunday
+			};
+			
+			Day d = Sunday;
+			int i = d + 2;  //okay
+			i  = d / d;     //okay
+			i *= d;         //okay
+			++d;            //error: no operator++(Day)
+			d += 2;         //error: no operator+=(Day, int)
+			d  = d + d;     //error: cannot convert int to Day
+			d  = -d;        //error: cannot convert int to Day
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{enum classes examples - traditional enums overload operators}
+		\begin{lstlisting}[gobble=12]
+			//do increment with wrap-around
+			Day& operator++(Day &day)
+			{
+			    static_assert(sizeof(day) >= sizeof(int));
+			    if(static_cast<int&>(day)++ == Sunday)
+			    {
+			        day = Monday;
+			    }
+			    return day;
+			}
+			
+			//disallow arbitrary addition
+			int operator+(Day&, int) = delete;
+			//.. other integer-types, swapped parameters
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{enum classes}
+		Enum classes are \textbf{not} implicitly convertible to integer.
+		
+		\only<beamer:0>{
+			You can still \lstinline|static_cast| between these types.
+		}
+		
+		\pause
+		
+		\emptyline
+		Enum classes are scoped.
+		
+		\only<beamer:0>{
+			\hint{\C++11 also allows scoped access to non-class enums.}
+		}
+		
+		\pause
+		
+		\emptyline
+		Enum classes support specifying an underlying type.
+		
+		\only<beamer:0>{
+			This is done via a colon and the type after the enum class declaration.
+			
+			\hint{\C++11 also allows specifying one for non-class enums.}
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{enum classes examples}
+		\begin{lstlisting}[gobble=12]
+			enum class Day
+			{
+			    Monday, Tuesday, Wednesday,
+			    Thursday, Friday, Saturday, Sunday
+			};
+			
+			Day d = Sunday; //error: undeclared identifier 'Sunday'
+			int i = d + 2;  //error: no operator+(Day, int)
+			i  = d / d;     //error: no operator/(Day, Day)
+			i *= d;         //error: no operator*=(int, Day)
+			++d;            //error: no operator++(Day)
+			d += 2;         //error: no operator+=(Day, int)
+			d  = d + d;     //error: no operator+(Day, Day)
+			d  = -d;        //error: no operator-(Day)
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{enum classes examples ``fixed''}
+		\begin{lstlisting}[gobble=12]
+			enum class Day
+			{
+			    Monday, Tuesday, Wednesday,
+			    Thursday, Friday, Saturday, Sunday
+			};
+			
+			Day d = Day::Sunday;
+			int i = static_cast<int>(d) + 2;
+			d = static_cast<Day>(2);
+		\end{lstlisting}
+		
+		\texttt{\emptyline[3.29]}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{enum classes examples - overload operators}
+		\begin{lstlisting}[gobble=12]
+			//do increment with wrap-around
+			Day& operator++(Day &day)
+			{
+			    //no static_assert -> enum class Day : int { ... }
+			    if(static_cast<int&>(day)++ == Sunday)
+			    {
+			        day = Monday;
+			    }
+			    return day;
+			}
+			Day operator++(Day &day, int)
+			{
+			    Day prev = day;
+			    ++day;
+			    return prev;
+			}
+			
+			//Day + int already not possible
+			//due to no implicit enum class -> int cast
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{explicit type conversion operators}
+	\begin{frame}
+		\begin{center}
+			{\Huge explicit type conversion operators}
+			
+			\emptyline
+			{\Large requiring \lstinline|static_cast| for type conversion}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{explicit type conversion operators}
+		\only<beamer:0>{
+			\C++ type conversion operators convert types implicitly, \\
+			like single-argument constructors can.
+			
+			\emptyline
+		}
+		We were already able to specify that constructors have to be invoked explicitly.
+		
+		Now we can do the same thing for type conversion operators.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{explicit type conversion operators examples - ctor}
+		\begin{lstlisting}[gobble=12]
+			struct Type
+			{
+			    Type() = default;
+			    explicit Type(ExType);
+			    Type(ImType);
+			};
+			
+			void doType(Type);
+		\end{lstlisting}
+		
+		\texttt{\emptyline[-0.2]}
+		
+		\begin{lstlisting}[gobble=12]
+			ExType e; ImType i;
+			Type f0 = i;                        //okay
+			Type f1 = e;                        //error
+			Type f2(e);                         //okay
+			doType(i);                          //okay
+			doType(e);                          //error
+			doType(Type(e));                    //okay
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{explicit type conversion operators examples}
+		\begin{lstlisting}[gobble=12]
+			struct Type
+			{
+			    Type() = default;
+			    explicit operator ExType();
+			    operator ImType();
+			};
+			
+			void doExType(ExType);
+			void doImType(ImType);
+		\end{lstlisting}
+			
+		\begin{lstlisting}[gobble=12]
+			Type t;
+			ImType  i = t;                      //okay
+			ExType e0 = t;                      //error
+			ExType e1 = static_cast<ExType>(t); //okay
+			doImType(t);                        //okay
+			doExType(t);                        //error
+			doExType(static_cast<ExType>(t));   //okay
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{\ttfamily final and \ttfamily override}
+	\begin{frame}
+		\begin{center}
+			{\Huge \lstinline[basicstyle=\Huge\ttfamily]|final| and \lstinline[basicstyle=\Huge\ttfamily]|override| specifiers}
+			
+			\emptyline
+			{\Large convey (and assert) information about the inheritance hierarchy}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{\lstinline|final| and \lstinline|override| specifiers - \lstinline|final|}
+		The \lstinline|final| specifier can be applied to classes and virtual functions.
+		
+		\emptyline
+		Applied to a \\
+		\leftskip=2em
+		\begin{tabular}{l@{ \rarrow}l}
+			virtual function & function cannot be overridden \\
+			class            & cannot be inherited
+		\end{tabular}
+		
+		\leftskip=0pt
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\lstinline|final| and \lstinline|override| specifiers - \lstinline|final| examples}
+		\begin{lstlisting}[gobble=12]
+			struct Foo
+			{
+			    virtual void DoFoo() final;
+			};
+			
+			struct Bar final : Foo
+			{
+			    void DoFoo(); //error: Foo::DoFoo is declared final
+			};
+			
+			struct Baz : Bar //error: Bar is declared final
+			{
+			};
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{\lstinline|final| and \lstinline|override| specifiers - \lstinline|override|}
+		The \lstinline|override| specifier can only be applied to virtual functions.
+		
+		\emptyline
+		If a function is specified as \lstinline|override|, it must override a method.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\lstinline|final| and \lstinline|override| specifiers - \lstinline|override| examples}
+		\begin{lstlisting}[gobble=12]
+			struct Base
+			{
+			    virtual void Foo();
+			    virtual void Bar(int);
+				        void Baz();
+			};
+			
+			struct D0 : Base
+			{
+			    int  Foo()     override; //error: return type differs
+			    void Bar(long) override; //error: parameter types differ
+			    void Baz()     override; //error: not virtual
+			};
+			
+			struct D1 : Base
+			{
+			    void Foo()    const override; //error: cv-qualifiers differ
+			    void Bar(int) override;       //okay
+			    void Baz();                   //okay
+			};
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{lambda expressions}
+	\begin{frame}
+		\begin{center}
+			{\Huge lambda expressions}
+			
+			\emptyline
+			{\Large anonymous functions}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}[fragile]{lambda expressions}
+		Expressions that create \textbf{anonymous\footnote{nameless} functions}.
+		
+		Actually more than a function: a \textbf{closure}.
+		
+		\pause
+		
+		Closure: You can enclose variables from the current scope.
+		
+		\pause
+		
+		\emptyline
+		\lstinline[deletekeywords={return}]|[captures](parameters) -> return-type { body }|
+		\pause
+		\lstinline                         |[captures](parameters) { body }    | \hint{(return type deduced)}
+		
+		\pause
+		
+		\emptyline
+		Lambdas without capture can be implicitly converted to a \textbf{function pointer}.
+	\end{frame}
+	
+	\begin{frame}[fragile]{lambda expressions - capture}
+		The ``capture'' of a lambda expression specifies the \textbf{variables to enclose}.
+		
+		\begin{itemize}
+			\item \lstinline|[]  | no captures
+			\item \lstinline|[x] | capture x by copy
+			\item \lstinline|[&x]| capture x by reference
+			\item \lstinline|[=] | capture all (by copy)
+			\item \lstinline|[&] | capture all (by reference)
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		`Capture all' refers to all variables not already mentioned. \\
+		Multiple captures are separated with a comma.
+		
+		\emptyline
+		\only<beamer:0>{
+			The ``capture all'' captures only the variables actually used in the lambdas body.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile]{lambda expressions examples}
+		\begin{lstlisting}
+			std::vector<int> list = MaekAwsumLst();
+			int inc = 2, total = 0;
+			std::for_each(list.begin(), list.end(),
+			              [inc,&](int& x){ total += x; x += inc; });
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}
+			//std::qsort(void *ptr, std::size_t count, std::size_t size,
+			//           int (*comp)(const void *, const void *));
+			int32_t a[] = { 7, 5, 8, 7, 4, 6, 9 };
+			std::qsort(a, 7, 4,
+			           [](const void *pa, const void *pb) -> int
+			           {
+			               auto a = *static_cast<const int32_t*>(pa);
+			               auto b = *static_cast<const int32_t*>(pb);
+			               return a < b ? -1 :
+			                      a > b ?  1 :
+			                      0;
+			           });
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{member initialization}
+	\begin{frame}
+		\begin{center}
+			{\Huge member initialization}
+			
+			\emptyline
+			{\Large initialize members inline}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{member initialization}
+		\only<beamer:0>{Via member initialization you}%
+		\only<handout:0>{You}
+		can provide a \textbf{default value} for member variables%
+		\only<beamer:0>{ that will be used if the constructor does not initialize them}.
+		
+		\pause
+		
+		\emptyline
+		\only<beamer:0>{
+			\hint{Although you can then default the default constructor, the constructor will not be trivial.}
+		}
+		
+		Ordering is important.
+		
+		\only<beamer:0>{
+			If you use other member-variables in the initialization they must be declared above it.
+			
+			It will compile otherwise, but upon a construction using it you are entering the domain of undefined behavior.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{member initialization examples}
+		\begin{lstlisting}[gobble=12]
+			struct Foo
+			{
+			    Foo();
+			    Foo(int a);
+			    
+			    std::string A = "forty";
+			    std::string B = A + "two";
+			    std::string C = B + " point zero";
+			};
+			
+			//note: not trivial!
+			Foo::Foo() = default;
+			Foo::Foo(int a)
+			    : A(std::to_string(a))
+			    //B will be std::to_string(a) + "two"
+			    , C(B)
+			    //C will be std::to_string(a) + "two"
+			{}
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{raw string literals}
+	\begin{frame}
+		\begin{center}
+			{\Huge raw string literals}
+			
+			\emptyline
+			{\Large string literals without escape sequences}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{raw string literals}
+		Raw string literals are string-literals in the form
+		
+		\begin{lstlisting}[gobble=12,xleftmargin=2em]
+			R"PREFIX(string)PREFIX"
+		\end{lstlisting}
+		
+		where \textit{PREFIX} is any character but ` ' `(' `)' `\textbackslash' and
+		\only<beamer:0>{the control characters for horizontal and vertical tab, form feed and newline}
+		\only<handout:0>{some control characters}.
+		
+		\only<beamer:0>{
+			\emptyline
+			The \textit{PREFIX}-string may be at most 16 characters long.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{raw string literals examples}
+		\begin{lstlisting}[gobble=12]
+			std::string lion = R"L(\rawr\)L";
+			//lion == "\\rawr\\"
+			
+			std::string newline = R"(
+			)";
+			//newline == "\n"
+			//(independent of OS-specific file newline, e.g. \r\n)
+			
+			std::string dosPrompt = R"(C:\>)";
+			//dosPrompt == "C:\\>"
+			
+			std::string optQuotedStringRegex = R"X((\w+)|"([\w\s]+)")X";
+			//optQuotedStringRegex == "(\\w+)|\"([\\w\\s]+)\")"
+			
+			std::string mixed = R"(raw)" "\nand"
+			    R"(mix\n
+			    xed)";
+			//mixed == "raw\nandmix\\n\n\txed"
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{range-based \ttfamily for}
+	\begin{frame}
+		\begin{center}
+			{\Huge range-based \lstinline[basicstyle=\Huge\ttfamily]|for|}
+			
+			\emptyline
+			{\Large syntactic sugar for container (range) iteration}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{range-based \lstinline|for|}
+		The range-based \lstinline|for| provides a shorter syntax for iteration.
+		
+		Its main usage is for \textbf{containers}, but anything that returns \\
+		\lstinline|InputIterator|s for \lstinline|begin()| and \lstinline|end()| can be utilized.
+	\end{frame}
+	
+	\begin{frame}[fragile]{range-based \lstinline|for| examples}
+		\begin{lstlisting}[title=traditional \lstinline|for|]
+			for(auto i = begin(foo); i != end(foo); ++i)
+			{
+			    i->bar(*i);
+			}
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}[title=range-based \lstinline|for|]
+			for(auto &e: foo)
+			{
+			    e.bar(e);
+			}
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile]{range-based \lstinline|for| - custom iterator examples}
+		\begin{lstlisting}[title=\lstinline|begin()| and \lstinline|end()| as members]
+			struct Foo
+			{
+			    iterator begin();
+			    iterator end();
+			};
+			
+			for(auto x : Foo()){} //okay
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}[title=\lstinline|begin()| and \lstinline|end()| as free functions]
+			extern iterator begin(Foo&);
+			extern iterator end(Foo&);
+			
+			for(auto x : Foo()){} //okay
+		\end{lstlisting}
+		
+		\pause
+		
+		Remember to provide \lstinline|const| versions.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{range-based \lstinline|for| - Boost\footnote{reputable, peer-reviewed collection of \C++ libraries for general and various specific applications}.Range}
+		Works amazingly well with Boost.Range!
+		
+		\emptyline
+		\begin{lstlisting}[gobble=12]
+			using namespace boost::adaptors;
+			std::map<std::string, whatevs> someMap = ...;
+			for(auto &x : someMap
+			              //take elements [2..10)
+			            | sliced(2, 10)
+			              //only take keys from the map
+			            | map_keys
+			              //reverse the order (so elements (10..2])
+			            | reversed
+			              //split key into individual words
+			            | tokenized(boost::regex(R"(\w+)"))
+			            )
+			{
+			}
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}<handout:0>{The End}
+		\begin{center}
+			\emptyline[2]
+			{\Huge Thank you for tuning in.}
+			
+			\emptyline
+			{\LARGE Questions?}
+			
+			\emptyline[10]
+			\hint{{\large {\ttfamily :3}}}
+			
+			\hint{{\large *rawr*}}
+		\end{center}
+	\end{frame}
+\end{document}

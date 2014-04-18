@@ -1,0 +1,18 @@
+\PassOptionsToPackage{unicode}{hyperref}
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern} % more font symbols
+\usepackage{perpage}
+\usepackage{pfnote}
+\usepackage{transparent}
+
+\beamertemplatenavigationsymbolsempty
+
+\MakePerPage{footnote}
+
+\newcommand{\emptyline}[1][1]{\vspace{#1\baselineskip}}
+\newcommand{\hint}[1]{{\transparent{0.6}#1}}
+\newcommand{\rarrow}[0]{$\rightarrow$ }
+
+\setbeamercovered{transparent}
+\setbeamertemplate{footline}[frame number]

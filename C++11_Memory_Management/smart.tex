@@ -1,0 +1,865 @@
+\input{common_pres}
+\input{c++_stuff}
+
+\author{Alexander Hirsch}
+\begin{document}
+	\title{Dealing with pointers in modern \C++}
+	\subtitle{\insertauthor}
+	
+	\begin{frame}
+		\begin{center}
+			{\Huge Dealing with pointers in \\ modern \C++}
+		\end{center}
+		
+		\only<beamer:0>{
+			\emptyline[5.5]
+			\begin{center}
+				\raisebox{-.35\height}{
+					\href{https://creativecommons.org/publicdomain/zero/1.0/}{\includegraphics[scale=0.5]{cc-zero.pdf}}
+				}%
+				\hint{$\leftarrow$ link}
+				
+				\emptyline[0.5]
+				To the extent possible under law, Alexander Hirsch has waived all copyright and related or neighboring rights to this handout.
+			\end{center}
+		}
+	\end{frame}
+	
+	\begin{frame}{Who am I?}
+		\begin{itemize}
+			\item Alexander Hirsch
+				
+			\leftskip=2em
+				\item E-Mail: 1zeeky@gmail.com
+				\item Jabber/XMPP: z33ky@jabber.ccc.de
+				
+			\leftskip=0pt
+			
+			\emptyline
+			\item Computer Science student at TU Darmstadt
+			\item hobby-programmer
+			\emptyline
+			\item looked into many languages and programming paradigms
+			\item most experience with \C++ (started getting proficient around 2007)
+		\end{itemize}
+	\end{frame}
+		
+	\begin{frame}{Disclaimer}
+		What I state as facts might actually be untrue (though they are to my knowledge).
+		
+		\emptyline
+		
+		What I present as something ``you should do'', might not actually me a common idiom
+		and just my personal opinion.
+		
+		\pause
+		
+		\emptyline
+		Examples are not necessarily in good coding style. They are just intended to show specific features and hint at use cases.
+		
+		\only<beamer:0>{
+			\emptyline
+			They should be valid \C++, apart from missing \lstinline|\#include|s and some code should be inside a function, albeit it not being shown this way.
+			
+			Except of course where noted that the example would produce an error.
+		}
+	\end{frame}
+	
+	\begin{frame}{A shout out}
+		A shout out to these websites I find very helpful for getting information about \C++:
+		\begin{itemize}
+			\item \url{https://en.wikipedia.org/wiki/C\%2B\%2B11}
+			\item \url{http://cppreference.com}
+			\item \url{https://cppandbeyond.com}
+			\item \url{https://stackoverflow.com}
+			\item \url{https://isocpp.org}
+			\item \url{http://meetingcpp.com}
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		The Standard document is obviously also a very good source. \\
+		The (free) draft is mostly fine, too.
+	\end{frame}
+	
+	\begin{frame}{Dealing with pointers in modern \C++}
+		\begin{small}
+			\tableofcontents
+		\end{small}
+	\end{frame}
+	
+	\section{Introduction: Pointers}
+	\begin{frame}
+		\begin{center}
+			{\Huge Introduction: Pointers}
+			
+			\emptyline
+			{\Large what, why and how}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}<1>[label=SaH]{Stack \& Heap}
+		\begin{itemize}
+			\item Stack \rarrow program stack
+			\begin{itemize}
+				\item local variables
+				\item function arguments
+				\item return address
+			\end{itemize}
+			
+			\pause
+			
+			\item Heap \rarrow ``memory pool''
+			\begin{itemize}
+				\item dynamic lifetime
+				\item large data-structures \hint{(prevent stack overflow)}
+				\item objects, whose size is only known at run-time \hint{(data hiding, polymorphism)}
+			\end{itemize}
+		\end{itemize}
+	\end{frame}
+	
+	%close enough
+	\lstdefinelanguage[ARMv8]{Assembler}[x86masm]{Assembler}{
+		comment=[l]{;},
+		literate=%
+			*
+			{,}{{{\color[rgb]{0.07,0.07,0.07},}}}1
+			{=}{{{\color[rgb]{0.2,0.2,0.2}=}}}1
+			{\{}{{{\color[rgb]{0.2,0.2,0.2}\{}}}1
+			{\}}{{{\color[rgb]{0.2,0.2,0.2}\}}}}1
+	}
+	\begin{frame}<handout:0>[fragile=singleslide]{Stack \& Heap - stack in assembly}
+		\begin{lstlisting}[language={[ARMv8]Assembler},gobble=12]
+			;save work registers and lr
+			;lr is Link Register (return address)
+			push {r9-r10,lr}
+			
+			;note: many arguments are passed via register
+			ldr r0, =fmt
+			mov r1, 2
+			bl printf
+			
+			;restore work registers and lr
+			pop {r9-r10,lr}
+		\end{lstlisting}
+	\end{frame}
+	
+	\againframe<2|handout:0>{SaH}
+	
+	\begin{frame}{Pointers}
+		Many people seem to have trouble \textbf{understanding what pointers are}.
+		
+		\begin{center}
+			\includegraphics[scale=0.74]{pointer_img.pdf}
+		\end{center}
+		
+	\end{frame}
+	
+	\begin{frame}{Why do we need pointers?}
+		\only<1>{
+			Stack addressing done via offset to frame-pointer (done by compiler).
+		}
+		\only<2-|handout:0>{
+			\hint{Stack addressing done via offset to frame-pointer (done by compiler).}
+		}
+		
+		\onslide<2->{
+			\rarrow Heap addressing
+		}
+		
+		\pause
+		
+		Other use-cases:
+		\begin{itemize}
+			\item optional arguments/return values
+			\item returning or passing big objects as arguments without copy
+		\end{itemize}
+	\end{frame}
+	
+	\begin{frame}[fragile]{Allocating objects}
+		\begin{lstlisting}[title=Stack]
+			int  a;
+			char b[4];
+			a = 42;
+			b[0] = '0';
+		\end{lstlisting}
+		
+		\hint{detail: Arrays implemented as pointers to the first element}
+		\hint{  \rarrow \lstinline|a[i]| is syntactic sugar for \lstinline|*(a + i)|}
+		
+		\pause
+		
+		\begin{lstlisting}[title=Heap]
+			int  *a   = new int;
+			char  b[] = new char[4];
+			//wrong: a = 42; -> set address to 42
+			//       C++'s type system would also disallow this
+			//       without explicit casting
+			*a = 42;
+			//note: same as in stack example
+			b[0] = '0';
+		\end{lstlisting}
+			
+		\lstinline|int| and \lstinline|char[]| on the Heap, pointers on the Stack
+	\end{frame}
+	
+	\begin{frame}[fragile]{Deallocating objects}
+		\begin{lstlisting}[title=Stack]
+			{
+			    int  a;
+			    char b[4];
+			    //a and b implicitly popped off the stack
+			}
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}[title=Heap]
+			{
+			    int  *a   = new int;
+			    char  b[] = new char[4];
+			    delete   a;
+			    delete[] b;
+			    //a and b implicitly popped off the stack
+			}
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{The problem with pointers}
+		So, what's the \textbf{problem} with pointers? \\
+		How do we need to ``deal'' with them?
+		
+		\pause
+		
+		\begin{itemize}
+			\item don't forget to \textbf{delete} your pointer
+			\begin{itemize}
+				\item operator delete?
+				\item free(void*)?
+				\item DestroyObject(Object*)?
+			\end{itemize}
+			\pause
+			\item but also only do it \textbf{once}
+			\pause
+			\item delete your pointer in \textbf{all paths}, also when exceptions are thrown
+		\end{itemize}
+	\end{frame}
+		
+	\begin{frame}{The problem with pointers}
+		Am I even responsible for deleting the pointer?
+		% hide first <+->
+		\only<+->{}
+		\begin{itemize}
+			\item \lstinline|SDL_Window* SDL_CreateWindow(...)|\footnote{SDL 2.0.3, \url{http://www.libsdl.org}} \\
+				\rarrow \only<+->{you can: \lstinline|SDL_DestroyWindow|}
+				
+			\item \lstinline|char** PHYSFS_enumerateFiles(...)|\footnote{PhysicsFS 2.0.3, \url{https://icculus.org/physicsfs/}} \\
+				\rarrow \only<+->{yes: \lstinline|PHYSFS_freeList|}
+				
+			\item \lstinline|GList* g_list_reverse(...)|\footnote{GLib 2.38.2, \url{https://developer.gnome.org/glib}} \\
+				\rarrow \only<+->{kind of: \lstinline|g_list_reverse| operates in-place}
+				
+			\item \lstinline|char* strdup(...)|\footnote{standard C library (C99)} \\
+				\rarrow \only<+->{yes, \lstinline|free|}
+				
+			\item \lstinline|char* strtok(...)|\footnotemark[4] \\
+				\rarrow \only<+->{no, it uses the memory you passed in}
+				
+		\end{itemize}
+		% workaround bug: footnotecounter resets
+		\only<0->{}
+	\end{frame}
+	
+	\section{Avoiding Pointers}
+	\begin{frame}
+		\begin{center}
+			{\Huge Avoiding Pointers}
+			
+			\emptyline
+			{\Large Avoid dealing with pointers \\ by avoiding them in the first place}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - avoid \lstinline|container<T*>|}
+		I've seen containers like \std{vector<T*>} or \std{list<T*>} for no reason. \\
+		\std{vector<T>} and \std{list<T>} usually work just as well.
+		
+		\pause
+		
+		\emptyline
+		Reasons you really do want a \lstinline|T*| container:
+		\begin{itemize}
+			\item polymorphism \hint{(consider intrusive lists \rarrow less indirection)}
+			\item need to copy the elements, but \lstinline|T| is non-copyable or very expensive to copy \hint{(consider Ranges\footnote{e.g. Boost\footnotemark.Range})}
+		\footnotetext{reputable, peer-reviewed collection of \C++ libraries for general and various specific use cases}
+			\item container of references to existing objects
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		Tip: \boost{ptr_vector} (or \boost{ptr_list}, or ...); handles deletion, supports (customizable) deep-copies
+	\end{frame}
+	
+	\begin{frame}[fragile]{Avoiding pointers - lvalue-references}
+		A reference is an alias to another object.
+		
+		Compared to pointers:
+		\begin{itemize}
+			\item cannot be reassigned
+				\only<beamer:0>{(assignment assigns to variable, not reference)}
+			\item there is no ``\lstinline|nullptr|-reference''
+			\item semantics: you refer to an object (but don't own it)
+		\end{itemize}
+		
+		\pause
+		
+		\begin{lstlisting}
+			void byCopy(int  a) {  a = 1; }
+			void byPtr (int *a) { *a = 2; }
+			void byRef (int &a) {  a = 3; }
+			int main() {
+			    int i = 0;
+			    byCopy(i); //i still 0
+			    byPtr(&i); //i now 2
+			    byRef(i);  //i now 3
+			}
+		\end{lstlisting}
+		
+		\pause
+		
+		Note: \lstinline|T&|-containers (also \lstinline|T&|-arrays) are impossible.
+		
+		\leftskip=2em Consider \std{reference_wrapper}.
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - rvalue-references vs lvalue-references}
+		\begin{tabular}{ll}
+			lvalue:                               & non-temporary object \\
+			                                      & \lstinline|x| in \lstinline|int x;| \\
+			\action<2->{(p\footnote{pure})rvalue} & \action<2->{a temporary} \\
+			                                      & \action<2->{the result of \lstinline|x + y|}
+		\end{tabular}
+		
+		\pause
+		%another one to compensate for the \actions
+		\pause
+		
+		\emptyline[2]
+		With lvalue-references, you create \\
+		an \textbf{alias for something already named}.
+		
+		\pause
+		
+		\emptyline
+		With rvalue-references, you create \\
+		a \textbf{name for something unnamed}.
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - rvalue-references}
+		When you take a rvalue-reference you \textbf{extend the lifetime} of the temporary.
+		
+		That also means, that a rvalue-reference is a lvalue.
+		
+		\pause
+		
+		When the rvalue-reference goes out of scope, the destructor of the referenced object is called.
+		
+		\only<beamer:0>{
+			\hint{This is not the case for lvalue-references, for which it would be disastrous since the reference is just an alias to something existing somewhere else.}
+		}
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - rvalue-references}
+		When we copy an object, we must \textbf{duplicate all its data} (think copy-constructor).
+		
+		\pause
+		
+		\emptyline
+		If we knew that the object we're copying is a \textbf{temporary} that won't be used anymore, we could \textbf{cannibalize} it.
+		
+		\pause
+		
+		\emptyline
+		An rvalue-reference tells us that it references a temporary.
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - move constructor}
+		A constructor taking an rvalue-reference \only<beamer:0>{of the type that is constructed} is called \textbf{move-constructor}.
+		
+		\pause
+		
+		\emptyline
+		It is called that, because the process of making a rvalue from a lvalue is called \textbf{moving}.
+		
+		\pause
+		
+		\emptyline[2]
+		The utility function \lstinline|std::move| was created for this.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{Avoiding pointers - rvalue-references examples}
+		\begin{lstlisting}[gobble=12]
+			struct BigMatrix
+			{
+			    //std::vector already supports rvalue-references,
+			    //that wouldn't be interesting
+			    int *Data;
+			};
+			
+			//move constructor taking a rvalue-reference as argument
+			BigMatrix::BigMatrix(BigMatrix &&that)
+			     //no need to allocate our own memory
+			    :Data(that.Data)
+			{
+			    //make sure that.~BigMatrix() doesn't free our data!
+			    that.Data = nullptr;
+			}
+			
+			BigMatrix::~BigMatrix()
+			{
+			    delete[] Data;
+			}
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{Avoiding pointers - rvalue-references examples cont'}
+		\begin{lstlisting}[gobble=12]
+			//don't get the idea to return a rvalue-reference
+			BigMatrix operator*(const BigMatrix &a, const BigMatrix &b)
+			{
+			    BigMatrix result;
+			    ...
+			    //std::move makes a rvalue-reference
+			    //from a lvalue-reference
+			    return std::move(result);
+			}
+			
+			int main()
+			{
+			    BigMatrix a(...), b(...);
+			    //move-constructed (or not with compiler optimization)
+			    BigMatrix c(a * b);
+			    //will not be move (or copy) constructed, uses temporary
+			    BigMatrix &&d = a * b;
+			}
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - avoid C-style arrays}
+		Prefer \std{array} or \std{vector} to C-style arrays (\lstinline|T array[size]; T *array = new T[size];|)
+		
+		\begin{itemize}
+			\item \std{array} \rarrow compile-time known sizes \\ \hint{beware of stack-overflow}
+			\item \std{vector} \rarrow dynamic sizable
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		Raw access (\lstinline|T*|):
+		\begin{itemize}
+			\item via \lstinline|data()|
+			\item elements guaranteed to be stored continuously \rarrow interface with C-style APIs
+		\end{itemize}
+	\end{frame}
+	
+	\begin{frame}<beamer:0>{Avoiding pointers - avoid C-style arrays - benefits}
+		You can easily switch the underlying data-structure and usually not worry about anything more.
+		
+		\hint{E.g. vector, list, deque}
+		
+		\emptyline
+		You can get bounds-checking.
+		
+		\emptyline
+		STL containers provide a convenient interface for various operations, including
+		\begin{itemize}
+			\item adding and removing elements
+			\item resizing or pre-allocating (reserving) memory
+			\item copying the container
+		\end{itemize}
+		
+		Some containers won't provide the functions that don't make sense for them (e.g. resizing \std{array}).
+		
+		The shared interface is defined in various \C++ Container concepts.
+	\end{frame}
+	
+	\begin{frame}<beamer:0>{Avoiding pointers - avoid C-style arrays - benefits}
+		Algorithms designed for usage with the container-interface also implemented by \std{vector}, like
+		\begin{itemize}
+			\item sorting
+			\item set operations
+			\item transformations
+			\item creating partial copies
+		\end{itemize}
+		
+		\emptyline
+		You can use the range-based \lstinline|for| loop.
+		
+		Note: Stack allocated C-style arrays work too, \\
+		but heap allocated ones do not.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{Avoiding pointers - avoid C-style arrays examples}
+		\begin{lstlisting}
+			std::vector<int> iv = { 1, 2, 3, 4, 5 };
+			int *ip = iv.data();
+			assert(ip[0] == 1);
+			++ip[0];
+			assert(iv[0] == 2);
+			
+			std::vector<int> cv(ip, ip + 5);
+			assert(std::equal(iv, cv));
+			assert(iv.data() != cv.data());
+			
+			std::vector<int> mv(std::move(iv));
+			assert(mv.data() == ip);
+			assert(iv.size() == 0);
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - (Array TS\footnote{Technical Specification}) \std{dynarray}}
+		Post \C++14 \std{dynarray}:
+		\begin{itemize}
+			\item size set at run-time
+			\item (unlike \std{vector}) don't grow or shrink after that
+			\item either on stack or heap (cannot specify manually)
+		\end{itemize}
+		
+		Provides similar interface to \std{array} and \std{vector} for raw access to continuous data.
+	\end{frame}
+	
+	\begin{frame}{Avoiding pointers - \boost{optional}}
+		\boost{optional}\footnote{\std{optional} in Library Fundamentals TS}
+		\begin{itemize}
+			\item like \lstinline[morekeywords={option}]|option| in Standard ML and OCaml
+			\item or like \lstinline[morekeywords={Maybe}]|Maybe| in Haskell
+		\end{itemize}
+		
+		\begin{itemize}
+			\item \boost{optional} either has a value or is uninitialized
+			\pause
+			\item uninitialized state is a well defined state (like a \lstinline|nullptr|)
+			      invalid access leads to undefined behavior
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		Usage for optional arguments and return values.
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{Avoiding pointers - \boost{optional}}
+		\begin{lstlisting}[gobble=12]
+			boost::optional<int> a;
+			assert(!a);
+			a = 5;
+			assert(a && *a == 5);
+			a.reset(); //same as a = boost::none;
+			assert(!a);
+		\end{lstlisting}
+	\end{frame}
+	
+	\section{Smart pointers}
+	\begin{frame}
+		\begin{center}
+			{\Huge Smart pointers}
+			
+			\emptyline
+			{\Large Wrapping pointers in a safer shell}
+		\end{center}
+	\end{frame}
+	
+	\begin{frame}{Smart pointers}
+		Smart pointers are classes that \textbf{wrap around a pointer}-member.
+		
+		By carrying \textbf{ownership-semantics}, they enable implicit release of resources (like memory).
+		
+		\pause
+		
+		\emptyline
+		\C++98 has \std{auto_ptr}. I've rarely seen it in the wild.
+		
+		\pause
+		
+		\emptyline
+		\C++TR1 suggested \std{shared_ptr} and \std{weak_ptr}. They got in \C++11.
+		
+		\pause
+		
+		\emptyline
+		\C++11 replaced \std{auto_ptr} with \std{unique_ptr}%
+		\only<beamer:0>{, which makes use of new language features}.
+		
+		\pause
+		
+		\emptyline[1.5]
+		
+		Boost has \boost{intrusive_ptr}.
+	\end{frame}
+	
+	\begin{frame}{\std{shared_ptr}}
+		\std{shared_ptr} is a \textbf{reference-counting} pointer.
+		
+		Only reference-counting is thread-safe.
+		
+		\pause
+		
+		\begin{itemize}
+			\item start with count == 1
+			\item when copied, ++count
+			\item when destroyed, -{}-count
+			\item when count == 0, delete pointer ``automatically''
+		\end{itemize}
+		
+		\only<beamer:0>{
+			Default delete via \lstinline|operator delete| (or \lstinline|operator delete[]| for arrays), \\
+			but you can specify a custom deleter.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile]{\std{shared_ptr} examples}
+		\begin{lstlisting}
+			//make_shared creates a shared_ptr
+			auto i = std::make_shared<int>(5);
+			assert(i.unique() && i.use_count() == 1);
+			auto j = i;
+			assert(!i.unique() && i.use_count() == 2);
+			assert(i == j);
+			auto k = std::make_shared<int>(*i);
+			i.swap(k);
+			assert(i.unique());
+			assert(j == k);
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}
+			auto window = std::shared_ptr<SDL_Window>(
+			    SDL_CreateWindow(...), &SDL_DestroyWindow);
+			//shared_ptr::get() obtains a raw pointer
+			SDL_GetWindowID(window.get());
+			//shared_ptr::reset deletes the pointer
+			window.reset();
+			assert(!window);
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}
+			auto dup = std::shared_ptr<const char>(strdup(...), &free);
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{\std{weak_ptr}}
+		The \std{weak_ptr} is a \textbf{weak reference} to a \std{shared_ptr}.
+		
+		\begin{itemize}
+			\item does not modify reference-count
+			\item still refers to an object
+			\pause
+			\item in contrast to raw pointer: can know if object was freed (by \std{shared_ptr})
+		\end{itemize}
+		
+		\pause
+		
+		\emptyline
+		To operate on an object a \std{weak_ptr} is pointing to, you must create a \std{shared_ptr} from it.
+		
+		\only<beamer:0>{
+			This way you have the guarantee, that the object remains valid during your operation.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\std{weak_ptr} examples}
+		\begin{lstlisting}[gobble=12]
+			auto i = std::make_shared<int>(23);
+			auto weak_i = std::weak_ptr<int>(i);
+			
+			//weak_ptr can also check the reference-count
+			assert(weak_i.use_count() == 1);
+			//lock() obtains a shared_ptr
+			assert(weak_i.lock() != nullptr);
+			
+			*weak_i.lock() *= -1;
+			assert(*i == -23);
+			
+			i.reset();
+			assert(weak_i.use_count() == 0
+			    && weak_i.expired()
+			    && !weak_i.lock());
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{\std{make_shared} and \std{allocate_shared}}
+		\std{make_shared} is \textbf{more efficient} than using the \std{shared_ptr(T*)} constructor, \\
+		because it can allocate the reference-count right next to the \lstinline|T|.
+		
+		\pause
+		
+		\std{make_shared} uses \lstinline|operator new| and \lstinline|operator delete|, \\
+		but you can supply a \textbf{custom Allocator}\footnote{template-class with functions to allocate memory and optionally customizable construction and destruction behavior} with \std{allocate_shared}.
+		
+		\pause
+		
+		\emptyline
+		
+		Note that when the \std{shared_ptr(T*)} constructor is used, the object is destroyed when the \textbf{last \lstinline[basicstyle=\bf\ttfamily]|std::shared_ptr| pointing to it} gets destroyed, \\
+	while \std{make_shared} (and \std{allocate_shared}) also require \textbf{no \lstinline[basicstyle=\bf\ttfamily]|std::weak_ptr|} to be referring to it.
+	\end{frame}
+	
+	\begin{frame}{\std{unique_ptr}}
+		A \std{unique_ptr} is (should be) the \textbf{only owner} of an object.
+		
+		\begin{itemize}
+			\item cannot be copied
+			\item \textbf{can} be moved
+			\item object freed when pointer goes out of scope
+		\end{itemize}
+		
+		\only<beamer:0>{
+			One can optionally supply a custom deleter, like with \std{shared_ptr}.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile]{\std{unique_ptr} examples}
+		\begin{lstlisting}
+			//note: make_unique is coming in C++14;
+			//missing in C++11 (library defect)
+			auto i = std::unique_ptr<int>(new int(5));
+			//auto j = i; //not possible (cannot copy)
+			auto j = std::move(i);
+			assert(*j == 5 && !i);
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}
+			auto window = std::unique_ptr<SDL_Window>(
+			    SDL_CreateWindow(...), &SDL_DestroyWindow);
+			//unique_ptr::get() obtains a raw pointer
+			SDL_GetWindowID(window.get());
+			//unique_ptr::reset deletes the pointer
+			window.reset();
+			//window no longer manages an object,
+			//so the following assertion holds
+			assert(!window);
+		\end{lstlisting}
+		
+		\pause
+		
+		\begin{lstlisting}
+			auto dup = std::unique_ptr<char*>(strdup("abcdefg", &free);
+			//unique_ptr::release releases ownership
+			free(dup.release());
+			assert(!dup);
+		\end{lstlisting}
+	\end{frame}
+	
+	\begin{frame}{\boost{intrusive_ptr}}
+		A \boost{intrusive_ptr} ties smart pointer interface into \textbf{existing reference-counting} mechanisms.
+		
+		\begin{itemize}
+			\item basic workings like \std{shared_ptr}
+			\item doesn't provide its own reference-count,
+			\item provides hooks instead
+		\end{itemize}
+		
+		\emptyline
+		This is mostly for interfacing with embedded reference counting.
+		
+		\only<beamer:0>{
+			Note that intrusive reference counting can have performance and memory usage advantages compared to just using \std{shared_ptr}.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile=singleslide]{\boost{intrusive_ptr} examples}
+		\begin{lstlisting}[gobble=12]
+			//automatically picked up by Boost, selected via signature
+			void intrusive_ptr_add_ref(GMappedFile *p)
+			{
+			    g_mapped_file_ref(p);
+			}
+			void intrusive_ptr_release(GMappedFile *p)
+			{
+			    g_mapped_file_unref(p);
+			}
+			
+			//...
+			
+			//false -> don't increase ref count (default true)
+			auto file = boost::intrusive_ptr<GMappedFile>(
+			    g_mapped_file_open(...), false);
+			auto file_copy = file;
+			file.reset();
+			assert(!file && file_copy);
+		\end{lstlisting}
+		
+		\only<beamer:0>{
+			The \boost{intrusive_ptr} does not introduce thread-safety. \\
+			Hooks are not called with a \lstinline|nullptr|.
+		}
+	\end{frame}
+	
+	\begin{frame}[fragile]{\lstinline|std::smart_ptr(new T())| - beware of memory leak}
+		\begin{lstlisting}
+			f(std::smart_ptr<T>(new T()), g());
+		\end{lstlisting}
+		
+		\pause
+		
+		Compiler might generate something equivalent to this:
+		
+		\begin{lstlisting}
+			auto temp0 = new T();
+			auto temp1 = g();
+			auto temp2 = std::smart_ptr<T>(temp0);
+			
+			f(temp2, temp1);
+		\end{lstlisting}
+		
+		\pause
+		
+		If \lstinline|g()| throws an exception, you have a memory leak.
+		
+		Using \std{make_shared} or \std{make_unique} would solve this problem.
+	\end{frame}
+	
+	\begin{frame}{Recap}
+		\begin{itemize}
+			\item Avoiding pointers
+			\begin{itemize}
+				\item \std{array}, \std{vector} and \std{dynarray}\textsuperscript{(Array TS)} instead of C-style arrays
+				\item avoid \lstinline|container<T*>|: store plain \lstinline|T|, \\
+					consider \boost{ptr_container} or intrusive lists
+				\item references instead of pointers to avoid copies
+				\item \boost{optional} (\std{optional}\textsuperscript{(Library Fundamentals TS)}) for optional values (instead of \lstinline|nullptr|)
+			\end{itemize}
+			\emptyline
+			\item Smart pointers
+			\begin{itemize}
+				\item \std{shared_ptr} and \std{weak_ptr} - shared ownership
+				\item \std{unique_ptr} - single ownership
+				\item \boost{intrusive_ptr} - wrap existing reference-counting
+			\end{itemize}
+		\end{itemize}
+	\end{frame}
+	
+	\begin{frame}<handout:0>{The End}
+		\begin{center}
+			\emptyline[2]
+			{\Huge Thank you for tuning in.}
+			
+			\emptyline
+			{\LARGE Questions?}
+			
+			\emptyline[10]
+			\hint{{\large {\ttfamily :3}}}
+			
+			\hint{{\large *rawr*}}
+		\end{center}
+	\end{frame}
+
+\end{document}

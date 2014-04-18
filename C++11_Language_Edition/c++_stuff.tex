@@ -1,0 +1,54 @@
+\usepackage{caption}
+\usepackage[T1]{fontenc} %proper tt brace
+\usepackage{listings}
+\usepackage{lmodern} % more font symbols
+\usepackage{relsize}
+\usepackage{xcolor}
+
+\newcommand{\std}[1]{\lstinline|std::#1|}
+\newcommand{\boost}[1]{\lstinline|boost::#1|}
+
+%c from texinfo.tex
+\def\ifmonospace{\ifdim\fontdimen3\font=0pt }
+
+%c C plus plus
+\def\C++{%
+\ifmonospace%
+	C++%
+\else%
+	C\kern-.033em\raise.30ex\hbox{\smaller\textbf{++}}%
+\fi%
+\spacefactor1000 }
+
+\lstset{
+	language=C++,
+	columns=flexible, %possibly better-looking text
+	keepspaces=true,
+	showstringspaces=false,
+	%gobble=12, %default-indent (document, frame, listing) * tabsize = 3*4 = 12
+	tabsize=4,
+	basicstyle=\footnotesize\ttfamily,
+	commentstyle=\color[rgb]{0,0.6,0},
+	identifierstyle=\color[rgb]{0,0,0},
+	keywordstyle=\color[rgb]{0,0,1},
+	stringstyle=\color[rgb]{0.58,0,0.92},
+	emphstyle=\itshape,
+	backgroundcolor=\color[rgb]{0.92,0.92,0.92},
+	escapeinside={/\%}{\%/}, %include TeX via /%\texhere%/
+	morekeywords={alignas,alignof,auto,char16_t,char32_t,constexpr,decltype,default,final,noexcept,nullptr,override,static_assert,thread_local},
+	literate=%
+		*
+		{;}{{{\color[rgb]{0.07,0.07,0.07};}}}1
+		{,}{{{\color[rgb]{0.07,0.07,0.07},}}}1
+		{.}{{{\color[rgb]{0.07,0.07,0.07}.}}}1
+		{(}{{{\color[rgb]{0.2,0.2,0.2}(}}}1
+		{)}{{{\color[rgb]{0.2,0.2,0.2})}}}1
+		{[}{{{\color[rgb]{0.2,0.2,0.2}[}}}1
+		{]}{{{\color[rgb]{0.2,0.2,0.2}]}}}1
+		{>}{{{\color[rgb]{0.2,0.2,0.2}>}}}1
+		{<}{{{\color[rgb]{0.2,0.2,0.2}<}}}1
+		{\{}{{{\color[rgb]{0.2,0.2,0.2}\{}}}1
+		{\}}{{{\color[rgb]{0.2,0.2,0.2}\}}}}1
+}
+
+\captionsetup[lstlisting]{justification=justified,singlelinecheck=false}
